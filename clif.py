@@ -5,10 +5,21 @@ import logging
 logger = logging.getLogger(__name__)
 
 import inspect
-
 import docopt_lite
 
+
+class CommandNode(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.options = []
+
+    def add_option(self, option):
+        self.options.append(option)
+
+
 def load_all_modules_from_dir(dirname):
+
     modules = []
 
     for importer, package_name, _ in pkgutil.iter_modules([dirname]):
@@ -18,15 +29,18 @@ def load_all_modules_from_dir(dirname):
 
     return modules
 
+
 class CLIF(object):
 
-    def __init__(self, cmd_folders, cmd_suffix = "_cmd"):
+    def __init__(self, prog_name, cmd_folders, cmd_suffix="_cmd"):
         if type(cmd_folders) is str:
             self.folders = [cmd_folders]
         else:
             self.folders = cmd_folders
 
         self.cmd_suffix = cmd_suffix
+
+        self.root = CommandNode(prog_name)
 
     def load_modules(self):
         modules_list = map(lambda folder: load_all_modules_from_dir(folder), self.folders)
@@ -50,10 +64,12 @@ class CLIF(object):
         return reduce(find_cmd_funcs, cmd_modules, [])
 
     def load_cmds(self):
+
         cmd_modules = self.load_modules()
         cmd_funcs = self.get_cmd_funcs(cmd_modules)
 
         for cmd_func in cmd_funcs:
+
             logger.debug("Find command function or class %s" % cmd_func.__name__)
 
             if inspect.isclass(cmd_func):
@@ -65,9 +81,9 @@ class CLIF(object):
 
             pattern = docopt_lite.build_docopt_pattern(doc)
 
-            print pattern
+            print pattern.children[0]
 
 if __name__ == "__main__":
-    clif = CLIF(["test/cmds", "test/cmds/subcmds"])
+    clif = CLIF("test", ["test/cmds", "test/cmds/subcmds"])
 
     clif.load_cmds()

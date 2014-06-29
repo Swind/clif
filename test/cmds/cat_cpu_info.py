@@ -6,9 +6,9 @@ def cat_sys_info_cmd(**kwargs):
         cat sys info --cpu --memory --repeat <repeat>
 
     Options:
-        --cpu               Show CPU information
-        --memory            Show memory usage
-        --repeat <repeat>   Repeat time
+        -c,--cpu               Show CPU information
+        -m,--memory            Show memory usage
+        -r,--repeat <repeat>   Repeat time [default: 1]
     """
     result = ""
 
