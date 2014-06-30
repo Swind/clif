@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 import inspect
 
+from command import CommandNode
 import docopt_lite
 
 def load_all_modules_from_dir(dirname):
@@ -20,13 +21,15 @@ def load_all_modules_from_dir(dirname):
 
 class CLIF(object):
 
-    def __init__(self, cmd_folders, cmd_suffix = "_cmd"):
+    def __init__(self, prog_name, cmd_folders, cmd_suffix = "_cmd"):
         if type(cmd_folders) is str:
             self.folders = [cmd_folders]
         else:
             self.folders = cmd_folders
 
         self.cmd_suffix = cmd_suffix
+
+        self.root_cmd = CommandNode(prog_name, pattern = None, parent = None)
 
     def load_modules(self):
         modules_list = map(lambda folder: load_all_modules_from_dir(folder), self.folders)
@@ -63,11 +66,27 @@ class CLIF(object):
             #Get doc string in the command
             doc = inspect.getdoc(cmd_func)
 
+            #Parse the doc string and generate docopt pattern
             pattern = docopt_lite.build_docopt_pattern(doc)
 
-            print pattern
+            self.create_command_node(pattern)
+
+    def create_command_node(self, pattern):
+        #Remove Required(Required(....))
+        pattern = pattern.children[0]
+
+        parent_cmd = self.root_cmd
+
+        for cmd in pattern.flat(docopt_lite.Command):
+            subcmd = parent_cmd[cmd.name]
+            parent_cmd = subcmd
+
+        #The last command node (leaf) will need this pattern to generate arguments of parser
+        cmd.pattern = pattern
+
+
 
 if __name__ == "__main__":
-    clif = CLIF(["test/cmds", "test/cmds/subcmds"])
+    clif = CLIF("clif", ["test/cmds", "test/cmds/subcmds"])
 
     clif.load_cmds()
