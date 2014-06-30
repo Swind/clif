@@ -7,9 +7,12 @@ logger = logging.getLogger(__name__)
 import inspect
 
 from command import CommandNode
+
 import docopt_lite
 
+
 def load_all_modules_from_dir(dirname):
+
     modules = []
 
     for importer, package_name, _ in pkgutil.iter_modules([dirname]):
@@ -18,6 +21,7 @@ def load_all_modules_from_dir(dirname):
             modules.append(module)
 
     return modules
+
 
 class CLIF(object):
 
@@ -53,10 +57,12 @@ class CLIF(object):
         return reduce(find_cmd_funcs, cmd_modules, [])
 
     def load_cmds(self):
+
         cmd_modules = self.load_modules()
         cmd_funcs = self.get_cmd_funcs(cmd_modules)
 
         for cmd_func in cmd_funcs:
+
             logger.debug("Find command function or class %s" % cmd_func.__name__)
 
             if inspect.isclass(cmd_func):
