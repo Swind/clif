@@ -1,7 +1,6 @@
 from sh import cat
 from docopt import docopt
 
-
 def flvcli_cmd(**kwargs):
     """
     Usage: flvcli [-h] <action>

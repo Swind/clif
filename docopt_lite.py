@@ -402,6 +402,6 @@ if __name__ == "__main__":
 
     pattern = build_docopt_pattern(test_doc)
 
-    for item in pattern.fix().children[0].children:
+    for item in pattern.children[0].children:
         print item
 

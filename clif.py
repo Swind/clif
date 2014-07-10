@@ -1,14 +1,12 @@
 import sys
 import pkgutil
+import inspect
+import docopt_lite
 
 import logging
 logger = logging.getLogger(__name__)
 
-import inspect
-
 from command import CommandNode
-
-import docopt_lite
 
 
 def load_all_modules_from_dir(dirname):
@@ -23,43 +21,46 @@ def load_all_modules_from_dir(dirname):
     return modules
 
 
+def load_modules(folders):
+    modules_list = map(lambda folder: load_all_modules_from_dir(folder), folders)
+
+    def flat_list(result, items):
+        result.extend(items)
+        return result
+
+    modules = reduce(flat_list, modules_list, [])
+
+    return modules
+
+
+def get_cmd_funcs(cmd_modules, cmd_suffix):
+
+    #Return all function or class in the module and the suffix of name is <cmd_suffix>
+    def find_cmd_funcs(funcs, cmd_module):
+        cmd_funcs = [cmd_func for (cmd_name, cmd_func) in inspect.getmembers(cmd_module) if cmd_name.endswith(cmd_suffix)]
+        funcs.extend(cmd_funcs)
+        return funcs
+
+    return reduce(find_cmd_funcs, cmd_modules, [])
+
+
 class CLIF(object):
 
-    def __init__(self, prog_name, cmd_folders, cmd_suffix = "_cmd"):
+    def __init__(self, prog_name, cmd_folders, cmd_suffix="_cmd"):
+
         if type(cmd_folders) is str:
-            self.folders = [cmd_folders]
+            folders = [cmd_folders]
         else:
-            self.folders = cmd_folders
+            folders = cmd_folders
 
-        self.cmd_suffix = cmd_suffix
+        self.root_cmd = CommandNode(prog_name, pattern=None, parent=None)
 
-        self.root_cmd = CommandNode(prog_name, pattern = None, parent = None)
+        self.__load_cmds(folders, cmd_suffix)
 
-    def load_modules(self):
-        modules_list = map(lambda folder: load_all_modules_from_dir(folder), self.folders)
+    def __load_cmds(self, folders, cmd_suffix):
 
-        def flat_list(result, items):
-            result.extend(items)
-            return result
-
-        modules = reduce(flat_list, modules_list, [])
-
-        return modules
-
-    def get_cmd_funcs(self, cmd_modules):
-
-        #Return all function or class in the module and the suffix of name is <cmd_suffix>
-        def find_cmd_funcs(funcs, cmd_module):
-            cmd_funcs = [cmd_func for (cmd_name, cmd_func) in inspect.getmembers(cmd_module) if cmd_name.endswith(self.cmd_suffix)]
-            funcs.extend(cmd_funcs)
-            return funcs
-
-        return reduce(find_cmd_funcs, cmd_modules, [])
-
-    def load_cmds(self):
-
-        cmd_modules = self.load_modules()
-        cmd_funcs = self.get_cmd_funcs(cmd_modules)
+        cmd_modules = load_modules(folders)
+        cmd_funcs = get_cmd_funcs(cmd_modules, cmd_suffix)
 
         for cmd_func in cmd_funcs:
 
@@ -75,24 +76,24 @@ class CLIF(object):
             #Parse the doc string and generate docopt pattern
             pattern = docopt_lite.build_docopt_pattern(doc)
 
-            self.create_command_node(pattern)
+            self.root_cmd = self.__build_command_node(pattern, self.root_cmd)
 
-    def create_command_node(self, pattern):
+    def __build_command_node(self, pattern, parent_cmd):
         #Remove Required(Required(....))
-        pattern = pattern.children[0]
+        pattern = pattern.children[0].children
 
-        parent_cmd = self.root_cmd
+        for index, cmd in enumerate(pattern):
+            if isinstance(cmd, docopt_lite.Command):
+                subcmd = parent_cmd[cmd.name]
+                parent_cmd = subcmd
+            else:
+                break
 
-        for cmd in pattern.flat(docopt_lite.Command):
-            subcmd = parent_cmd[cmd.name]
-            parent_cmd = subcmd
+        #The last command node (leaf) will need this pattern to set arguments to parser
+        cmd.parameters = pattern[index:]
 
-        #The last command node (leaf) will need this pattern to generate arguments of parser
-        cmd.pattern = pattern
-
-
+        return parent_cmd
 
 if __name__ == "__main__":
     clif = CLIF("clif", ["test/cmds", "test/cmds/subcmds"])
 
-    clif.load_cmds()

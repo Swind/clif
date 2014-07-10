@@ -1,5 +1,6 @@
 from sh import echo
 
+
 def echo_hello_world_cmd(**kwargs):
     """
     Usage:
@@ -7,14 +8,15 @@ def echo_hello_world_cmd(**kwargs):
 
     Options:
         --user <user>             Hello World [default: root]
-        -c,--chinese                 Use Chinese to say hello world
+        -c,--chinese              Use Chinese to say hello world
     """
     print echo("echo hello world:" + kwargs["user"])
+
 
 class echo_hello_world2_cmd(object):
     """
     Usage:
-        echo hello world2 --user <user>
+        echo hello world2 --user
 
     Options:
         --user <user>             Hello World [default: root]
